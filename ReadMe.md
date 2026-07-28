@@ -46,6 +46,7 @@ python -m http.server 8000
 ## 参考项目
 
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect)
+- [bilibili-banner](https://github.com/palxiao/bilibili-banner/tree/main)：感谢该项目为本站顶部动态横幅提供的实现参考。
 
 ## License
 

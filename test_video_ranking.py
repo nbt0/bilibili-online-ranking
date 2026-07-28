@@ -1,6 +1,11 @@
 import unittest
+import time
 
-from video_ranking import BilibiliCrawler, PUBLIC_VIDEO_FIELDS
+from video_ranking import (
+    BilibiliCrawler,
+    PUBLIC_RANKING_SOURCES,
+    PUBLIC_VIDEO_FIELDS,
+)
 
 
 class StubCrawler(BilibiliCrawler):
@@ -60,6 +65,17 @@ class SumCrawler(PageCrawler):
 
 
 class BilibiliCrawlerTests(unittest.TestCase):
+    def test_public_pgc_source_limits(self):
+        limits = {
+            source['key']: source['limit']
+            for source in PUBLIC_RANKING_SOURCES
+        }
+        self.assertEqual(limits['anime'], 5)
+        self.assertEqual(limits['guochuang'], 5)
+        self.assertEqual(limits['movie'], 5)
+        self.assertEqual(limits['tv'], 5)
+        self.assertEqual(limits['variety'], 5)
+
     def test_parse_total_bounds(self):
         self.assertEqual(
             BilibiliCrawler.parse_total_bounds('3000+'),
@@ -226,6 +242,200 @@ class BilibiliCrawlerTests(unittest.TestCase):
         self.assertEqual(hydrated['mid'], '456')
         self.assertEqual(hydrated['view'], 1234)
         self.assertEqual(hydrated['danmaku'], 56)
+
+    def test_anime_selects_latest_two_first_two_and_latest_trailer(self):
+        now = int(time.time())
+        season_data = {
+            'new_ep': {'id': 4},
+            'episodes': [
+                {
+                    'id': 1,
+                    'bvid': 'BV1mainFirst',
+                    'cid': 11,
+                    'pub_time': now - 400,
+                },
+                {
+                    'id': 2,
+                    'bvid': 'BV1mainSecond',
+                    'cid': 22,
+                    'pub_time': now - 300,
+                },
+                {
+                    'id': 3,
+                    'bvid': 'BV1mainPrevious',
+                    'cid': 33,
+                    'pub_time': now - 200,
+                },
+                {
+                    'id': 4,
+                    'bvid': 'BV1mainLatest',
+                    'cid': 44,
+                    'pub_time': now - 100,
+                },
+                {
+                    'id': 5,
+                    'bvid': 'BV1mainFuture',
+                    'cid': 55,
+                    'pub_time': now + 3600,
+                },
+            ],
+            'section': [
+                {
+                    'title': 'PV花絮',
+                    'type': 1,
+                    'episodes': [
+                        {
+                            'id': 10,
+                            'bvid': 'BV1trailerOld',
+                            'cid': 101,
+                            'pub_time': now - 250,
+                            'title': '第1集预告',
+                        },
+                        {
+                            'id': 11,
+                            'bvid': 'BV1trailerLatest',
+                            'cid': 102,
+                            'pub_time': now - 50,
+                            'title': '正式宣传片',
+                        },
+                        {
+                            'id': 12,
+                            'bvid': 'BV1event',
+                            'cid': 103,
+                            'pub_time': now - 10,
+                            'title': '线下漫展活动',
+                        },
+                    ],
+                },
+                {
+                    'title': '高能看点',
+                    'type': 2,
+                    'episodes': [
+                        {
+                            'id': 13,
+                            'bvid': 'BV1bonus',
+                            'cid': 104,
+                            'pub_time': now - 10,
+                        },
+                    ],
+                },
+            ],
+        }
+
+        selected = BilibiliCrawler.select_pgc_episodes(
+            season_data,
+            'anime',
+        )
+
+        self.assertEqual(
+            [episode['bvid'] for episode in selected],
+            [
+                'BV1mainLatest',
+                'BV1mainPrevious',
+                'BV1mainFirst',
+                'BV1mainSecond',
+                'BV1trailerLatest',
+            ],
+        )
+
+    def test_movie_keeps_only_latest_episode_without_trailer(self):
+        now = int(time.time())
+        selected = BilibiliCrawler.select_pgc_episodes(
+            {
+                'episodes': [
+                    {
+                        'id': 1,
+                        'bvid': 'BV1movieOld',
+                        'cid': 11,
+                        'pub_time': now - 200,
+                    },
+                    {
+                        'id': 2,
+                        'bvid': 'BV1movieLatest',
+                        'cid': 22,
+                        'pub_time': now - 100,
+                    },
+                ],
+                'section': [
+                    {
+                        'title': 'PV',
+                        'type': 1,
+                        'episodes': [
+                            {
+                                'id': 3,
+                                'bvid': 'BV1movieTrailer',
+                                'cid': 33,
+                                'pub_time': now - 50,
+                            },
+                        ],
+                    },
+                ],
+            },
+            'movie',
+        )
+
+        self.assertEqual(
+            [episode['bvid'] for episode in selected],
+            ['BV1movieLatest'],
+        )
+
+    def test_tv_selects_latest_two_episodes_without_trailer(self):
+        now = int(time.time())
+        selected = BilibiliCrawler.select_pgc_episodes(
+            {
+                'episodes': [
+                    {
+                        'id': 1,
+                        'bvid': 'BV1tvFirst',
+                        'cid': 11,
+                        'pub_time': now - 400,
+                    },
+                    {
+                        'id': 2,
+                        'bvid': 'BV1tvSecond',
+                        'cid': 22,
+                        'pub_time': now - 300,
+                    },
+                    {
+                        'id': 3,
+                        'bvid': 'BV1tvPrevious',
+                        'cid': 33,
+                        'pub_time': now - 200,
+                    },
+                    {
+                        'id': 4,
+                        'bvid': 'BV1tvLatest',
+                        'cid': 44,
+                        'pub_time': now - 100,
+                    },
+                ],
+                'section': [
+                    {
+                        'title': '预告',
+                        'type': 1,
+                        'episodes': [
+                            {
+                                'id': 5,
+                                'bvid': 'BV1tvTrailer',
+                                'cid': 55,
+                                'pub_time': now - 50,
+                            },
+                        ],
+                    },
+                ],
+            },
+            'tv',
+        )
+
+        self.assertEqual(
+            [episode['bvid'] for episode in selected],
+            [
+                'BV1tvLatest',
+                'BV1tvPrevious',
+                'BV1tvFirst',
+                'BV1tvSecond',
+            ],
+        )
 
 
 if __name__ == '__main__':

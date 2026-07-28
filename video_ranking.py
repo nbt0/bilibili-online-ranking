@@ -42,7 +42,7 @@ PUBLIC_RANKING_SOURCES = (
     {
         'key': 'anime',
         'kind': 'pgc_rank',
-        'limit': 30,
+        'limit': 5,
         'season_type': 1,
         'endpoint': '/pgc/web/rank/list',
         'referer': 'https://www.bilibili.com/v/popular/rank/anime',
@@ -50,7 +50,7 @@ PUBLIC_RANKING_SOURCES = (
     {
         'key': 'guochuang',
         'kind': 'pgc_rank',
-        'limit': 30,
+        'limit': 5,
         'season_type': 4,
         'endpoint': '/pgc/season/rank/web/list',
         'referer': 'https://www.bilibili.com/v/popular/rank/guochuang',
@@ -58,20 +58,32 @@ PUBLIC_RANKING_SOURCES = (
     {
         'key': 'movie',
         'kind': 'pgc_rank',
-        'limit': 30,
+        'limit': 5,
         'season_type': 2,
         'endpoint': '/pgc/season/rank/web/list',
         'referer': 'https://www.bilibili.com/v/popular/rank/movie',
     },
     {
+        'key': 'tv',
+        'kind': 'pgc_rank',
+        'limit': 5,
+        'season_type': 5,
+        'endpoint': '/pgc/season/rank/web/list',
+        'referer': 'https://www.bilibili.com/v/popular/rank/tv',
+    },
+    {
         'key': 'variety',
         'kind': 'pgc_rank',
-        'limit': 30,
+        'limit': 5,
         'season_type': 7,
         'endpoint': '/pgc/season/rank/web/list',
         'referer': 'https://www.bilibili.com/v/popular/rank/variety',
     },
 )
+
+PGC_RECENT_EPISODE_SOURCES = frozenset({'anime', 'guochuang', 'tv'})
+PGC_TRAILER_SOURCES = frozenset({'anime', 'guochuang'})
+PGC_TRAILER_KEYWORDS = ('预告', 'pv', '宣传片', '先导', 'trailer')
 
 
 class BilibiliCrawler:
@@ -275,44 +287,123 @@ class BilibiliCrawler:
         payload = (data or {}).get('data') or (data or {}).get('result') or {}
         return (payload.get('list') or [])[:source['limit']]
 
-    @staticmethod
-    def select_pgc_episode(season_data):
-        """优先选择 season 标记的最新 episode"""
-        episodes = [
-            episode
-            for episode in season_data.get('episodes') or []
-            if episode.get('bvid') and episode.get('cid')
-        ]
-        if not episodes:
-            return None
-
-        newest_ep_id = (season_data.get('new_ep') or {}).get('id')
-        if newest_ep_id:
-            for episode in episodes:
-                if episode.get('id') == newest_ep_id:
-                    return episode
-
+    @classmethod
+    def queryable_pgc_episodes(cls, episodes):
+        """按接口顺序过滤可查询且已发布的 PGC episode"""
         now = int(time.time())
-        released = [
+        return [
             episode
-            for episode in episodes
-            if BilibiliCrawler.safe_int(episode.get('pub_time')) <= now + 300
+            for episode in episodes or []
+            if episode.get('bvid') and episode.get('cid')
+            and cls.safe_int(episode.get('pub_time')) <= now + 300
         ]
-        candidates = released or episodes
-        return max(
-            candidates,
+
+    @classmethod
+    def released_pgc_episodes(cls, episodes):
+        """过滤并按发布时间倒序排列可查询的 PGC episode"""
+        return sorted(
+            cls.queryable_pgc_episodes(episodes),
             key=lambda episode: (
-                BilibiliCrawler.safe_int(episode.get('pub_time')),
-                BilibiliCrawler.safe_int(episode.get('id')),
+                cls.safe_int(episode.get('pub_time')),
+                cls.safe_int(episode.get('id')),
             ),
+            reverse=True,
         )
 
-    def resolve_pgc_candidate(self, task):
-        """把 PGC season 排行项解析为可以查询在线人数的 episode"""
+    @classmethod
+    def select_pgc_episodes(cls, season_data, source_key):
+        """部分 PGC 来源取最新两集和第1、2集，番剧/国创再追加预告"""
+        main_episodes = cls.queryable_pgc_episodes(
+            season_data.get('episodes') or []
+        )
+        episodes = sorted(
+            main_episodes,
+            key=lambda episode: (
+                cls.safe_int(episode.get('pub_time')),
+                cls.safe_int(episode.get('id')),
+            ),
+            reverse=True,
+        )
+        newest_ep_id = (season_data.get('new_ep') or {}).get('id')
+        if newest_ep_id:
+            episodes.sort(
+                key=lambda episode: episode.get('id') == newest_ep_id,
+                reverse=True,
+            )
+
+        episode_limit = (
+            2 if source_key in PGC_RECENT_EPISODE_SOURCES else 1
+        )
+        selected = episodes[:episode_limit]
+
+        if source_key in PGC_RECENT_EPISODE_SOURCES:
+            selected_bvids = {
+                str(episode.get('bvid') or '')
+                for episode in selected
+            }
+            for episode in main_episodes[:2]:
+                bvid = str(episode.get('bvid') or '')
+                if bvid not in selected_bvids:
+                    selected.append(episode)
+                    selected_bvids.add(bvid)
+
+        if source_key in PGC_TRAILER_SOURCES:
+            trailers = []
+            for section in season_data.get('section') or []:
+                section_title = str(section.get('title') or '')
+                normalized_title = section_title.lower()
+                is_trailer_section = (
+                    '预告' in normalized_title
+                    or normalized_title.strip() in {
+                        'pv',
+                        '宣传片',
+                        '先导片',
+                        'trailer',
+                    }
+                )
+                for episode in cls.released_pgc_episodes(
+                    section.get('episodes') or []
+                ):
+                    episode_text = ' '.join(
+                        str(episode.get(key) or '').lower()
+                        for key in ('title', 'long_title', 'share_copy')
+                    )
+                    if (
+                        is_trailer_section
+                        or any(
+                            keyword in episode_text
+                            for keyword in PGC_TRAILER_KEYWORDS
+                        )
+                    ):
+                        trailers.append(episode)
+
+            selected_bvids = {
+                str(episode.get('bvid') or '')
+                for episode in selected
+            }
+            trailers = sorted(
+                (
+                    episode
+                    for episode in trailers
+                    if str(episode.get('bvid') or '') not in selected_bvids
+                ),
+                key=lambda episode: (
+                    cls.safe_int(episode.get('pub_time')),
+                    cls.safe_int(episode.get('id')),
+                ),
+                reverse=True,
+            )
+            if trailers:
+                selected.append(trailers[0])
+
+        return selected
+
+    def resolve_pgc_candidates(self, task):
+        """把 PGC season 排行项解析为可以查询在线人数的 episode 列表"""
         source, rank_item = task
         season_id = rank_item.get('season_id')
         if not season_id:
-            return None
+            return []
 
         data = self.request_json(
             self.pgc_season_api,
@@ -320,42 +411,55 @@ class BilibiliCrawler:
             referer=source['referer'],
         )
         season_data = (data or {}).get('result') or {}
-        episode = self.select_pgc_episode(season_data)
-        if not episode:
+        episodes = self.select_pgc_episodes(
+            season_data,
+            source['key'],
+        )
+        if not episodes:
             print(f"跳过 season {season_id}: 没有可用 episode")
-            return None
+            return []
 
         stat = rank_item.get('stat') or season_data.get('stat') or {}
         up_info = season_data.get('up_info') or {}
-        return {
-            'bvid': str(episode.get('bvid') or ''),
-            'aid': episode.get('aid'),
-            'cid': episode.get('cid'),
-            'videos': 1,
-            'season_id': season_id,
-            'ep_id': episode.get('id') or episode.get('ep_id'),
-            'title': str(
-                rank_item.get('title')
-                or season_data.get('title')
-                or episode.get('long_title')
+        season_title = str(
+            rank_item.get('title')
+            or season_data.get('title')
+            or ''
+        )
+        candidates = []
+        for episode in episodes:
+            episode_title = str(
+                episode.get('long_title')
                 or episode.get('title')
                 or ''
-            ),
-            'pic': str(
-                rank_item.get('cover')
-                or season_data.get('cover')
-                or episode.get('cover')
-                or ''
-            ),
-            'owner': str(up_info.get('uname') or ''),
-            'mid': str(up_info.get('mid') or ''),
-            'view': self.safe_int(stat.get('view')),
-            'danmaku': self.safe_int(stat.get('danmaku')),
-            'sources': [source['key']],
-        }
+            )
+            title = ' '.join(
+                part for part in (season_title, episode_title) if part
+            )
+            candidates.append({
+                'bvid': str(episode.get('bvid') or ''),
+                'aid': episode.get('aid'),
+                'cid': episode.get('cid'),
+                'videos': 1,
+                'season_id': season_id,
+                'ep_id': episode.get('id') or episode.get('ep_id'),
+                'title': title,
+                'pic': str(
+                    episode.get('cover')
+                    or rank_item.get('cover')
+                    or season_data.get('cover')
+                    or ''
+                ),
+                'owner': str(up_info.get('uname') or ''),
+                'mid': str(up_info.get('mid') or ''),
+                'view': self.safe_int(stat.get('view')),
+                'danmaku': self.safe_int(stat.get('danmaku')),
+                'sources': [source['key']],
+            })
+        return candidates
 
     def get_public_candidates(self):
-        """从六个公开排行榜组装并去重候选"""
+        """从公开排行榜组装并去重候选"""
         candidates = []
         pgc_tasks = []
 
@@ -381,12 +485,11 @@ class BilibiliCrawler:
 
         if pgc_tasks:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                for candidate in executor.map(
-                    self.resolve_pgc_candidate,
+                for resolved_candidates in executor.map(
+                    self.resolve_pgc_candidates,
                     pgc_tasks,
                 ):
-                    if candidate:
-                        candidates.append(candidate)
+                    candidates.extend(resolved_candidates)
 
         deduplicated = self.deduplicate_candidates(candidates)
         print(

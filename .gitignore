@@ -1,0 +1,15 @@
+# Local-only UP watch-pool experiment; never publish these files.
+/private-data/
+/screen_up_watch_pool.py
+
+# Legacy output locations, kept ignored in case an older script writes here.
+/up_watch_pool_candidates.json
+/up_watch_pool_checkpoint.json
+/up_watch_pool_top100.json
+
+# Generated files and local-only workflow directories.
+/dist/
+/_work/
+/_private/
+/__pycache__/
+*.py[cod]

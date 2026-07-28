@@ -13,182 +13,485 @@
         }
         
         body {
-            background-color: #f4f4f4;
-            color: #333;
-            padding: 20px;
+            min-width: 1000px;
+            background-color: #fff;
+            color: #222;
+            font-size: 12px;
         }
         
         .container {
-            max-width: 1200px;
+            width: 1160px;
             margin: 0 auto;
         }
-        
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: #fb7299;
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        a {
+            color: inherit;
+            text-decoration: none;
         }
-        
-        h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
+
+        .site-header {
+            padding-top: 64px;
+            background: #fff;
         }
-        
-        .subtitle {
-            font-size: 16px;
-            opacity: 0.8;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .sort-options {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        
-        .sort-btn {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .sort-btn:hover, .sort-btn.active {
-            background-color: #fb7299;
-            color: white;
-            border-color: #fb7299;
-        }
-        
-        .search-box {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 250px;
-            margin: 10px 0;
-        }
-        
-        .video-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .video-card {
-            background-color: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-            cursor: pointer;
-        }
-        
-        .video-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .video-thumbnail {
+
+        .banner-stage {
             position: relative;
-            width: 100%;
-            padding-top: 56.25%;
+            height: 160px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #4b95d2 0%, #aeeef5 100%);
+        }
+
+        .banner-layers {
+            position: absolute;
+            inset: 0;
             overflow: hidden;
         }
-        
-        .video-thumbnail img {
+
+        .banner-layer {
             position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            will-change: transform;
+        }
+
+        .banner-layer img,
+        .banner-layer video {
+            max-width: none;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .legacy-topbar {
+            position: fixed;
+            z-index: 1000;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .video-info {
-            padding: 15px;
-        }
-        
-        .video-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            height: 44px;
-        }
-        
-        .video-meta {
+            right: 0;
+            height: 64px;
+            padding: 0 24px;
             display: flex;
-            justify-content: space-between;
-            color: #666;
+            align-items: center;
+            gap: 18px;
+            color: #18191c;
             font-size: 14px;
+            text-shadow: none;
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(12px);
         }
-        
-        .video-owner {
-            color: #fb7299;
-            transition: color 0.3s;
+
+        .top-nav-left,
+        .top-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            white-space: nowrap;
         }
-        
-        .video-owner:hover {
-            color: rgb(0, 174, 236) !important;
+
+        .top-nav-left {
+            flex: 1 1 auto;
+            min-width: 0;
         }
-        
-        .online-count {
-            background-color: #fb7299;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: bold;
+
+        .mini-header-brand {
+            min-width: 100px;
+            height: 40px;
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            gap: 8px;
+            color: #24292f;
+            font-size: 15px;
+            font-weight: 600;
         }
-        
-        .rank-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
+
+        .mini-header-brand svg {
             width: 30px;
             height: 30px;
+            fill: currentColor;
+        }
+
+        .mini-header-brand:hover {
+            color: #57606a;
+        }
+
+        .top-nav-link {
+            transition: color 0.15s ease;
+        }
+
+        .top-nav-link:hover {
+            color: #00aeec;
+        }
+
+        .header-search {
+            width: min(360px, 28vw);
+            height: 38px;
+            display: flex;
+            flex: 0 0 auto;
+            overflow: hidden;
+            border: 1px solid #e3e5e7;
+            border-radius: 8px;
+            background: #f1f2f3;
+        }
+
+        .search-box {
+            width: 100%;
+            min-width: 0;
+            padding: 0 14px;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #222;
+            font-size: 13px;
+        }
+
+        .header-search button {
+            width: 48px;
+            flex: 0 0 48px;
+            border: 0;
+            border-left: 1px solid #e7e7e7;
+            background: transparent;
+            color: #505050;
+            cursor: pointer;
+        }
+
+        .header-search button:hover {
+            background: #e3e5e7;
+        }
+
+        .header-search svg {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+            fill: currentColor;
+        }
+
+        .project-link {
+            min-width: 58px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 0 12px;
+            border-radius: 8px;
+            background: #24292f;
+            color: #fff;
+            font-size: 13px;
+            transition: background 0.15s ease;
+        }
+
+        .project-link:hover {
+            background: #57606a;
+        }
+
+        .submit-link {
+            width: 72px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            background: #fb7299;
+            color: #fff;
+            font-size: 15px;
+            text-shadow: none;
+        }
+
+        .channel-shell {
+            height: 108px;
+            background: #fff;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .channel-nav {
+            width: 1160px;
+            height: 100%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .round-nav {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .round-nav-item {
+            min-width: 42px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #222;
+            font-size: 14px;
+        }
+
+        .round-nav-icon {
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            font-weight: bold;
-            font-size: 16px;
+            color: #fff;
+            font-size: 22px;
+            transition: transform 0.15s ease;
         }
-        
-        .rank-1, .rank-2, .rank-3 {
-            width: 35px;
-            height: 35px;
+
+        .round-nav-item:hover .round-nav-icon {
+            transform: translateY(-2px);
+        }
+
+        .round-home { background: #fb7299; }
+        .round-dynamic { background: #ffb11b; }
+        .round-popular { background: #f45a66; }
+        .round-channel { background: #6dc781; }
+
+        .category-grid {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: repeat(8, auto);
+            grid-template-rows: repeat(2, 24px);
+            grid-auto-flow: column;
+            align-content: center;
+            justify-content: space-between;
+            gap: 12px 16px;
+        }
+
+        .category-link,
+        .special-link {
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+            font-size: 13px;
+            transition: color 0.15s ease;
+        }
+
+        .category-link:hover,
+        .special-link:hover {
+            color: #00a1d6;
+        }
+
+        .category-badge {
+            min-width: 26px;
+            height: 14px;
+            margin-left: 3px;
+            padding: 0 3px;
+            border-radius: 2px;
+            background: #73c9e5;
+            color: #fff;
+            font-size: 9px;
+            line-height: 14px;
+            text-align: center;
+        }
+
+        .special-grid {
+            flex: 0 0 238px;
+            padding-left: 20px;
+            border-left: 1px solid #e7e7e7;
+            display: grid;
+            grid-template-columns: repeat(3, auto);
+            grid-template-rows: repeat(2, 24px);
+            grid-auto-flow: column;
+            align-content: center;
+            justify-content: space-between;
+            gap: 12px 13px;
+        }
+
+        .special-icon {
+            width: 17px;
+            height: 17px;
+            margin-right: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            background: #73c9e5;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        .list-heading {
+            height: 67px;
+            margin-top: 20px;
+            padding-bottom: 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #e5e9ef;
+        }
+
+        .list-heading-icon {
+            width: 25px;
+            height: 25px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: #f25d8e;
+            color: #fff;
+        }
+
+        .list-heading-icon svg {
+            width: 17px;
+            height: 17px;
+            fill: currentColor;
+        }
+
+        .list-heading h1 {
             font-size: 18px;
+            font-weight: 400;
+            line-height: 25px;
+        }
+
+        .list-heading p {
+            margin-left: 8px;
+            color: #99a2aa;
+            font-size: 13px;
+            line-height: 25px;
         }
         
-        .rank-1 {
-            background-color: #FFD700;
-            color: #333;
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 210px);
+            justify-content: center;
+            gap: 15px 25px;
+            max-width: 1160px;
+            margin: 15px auto 0;
         }
         
-        .rank-2 {
-            background-color: #C0C0C0;
-            color: #333;
+        .video-card {
+            background-color: #fff;
+            border: 1px solid #e5e9ef;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: default;
+            transition: border-color 0.2s ease;
+        }
+
+        .video-card:hover {
+            border-color: #ccd0d7;
+        }
+
+        .video-title:hover {
+            color: #00a1d6;
+        }
+
+        .video-card:hover .online-count strong {
+            color: #f25d8e;
         }
         
-        .rank-3 {
-            background-color: #CD7F32;
+        .video-thumbnail {
+            position: relative;
+            display: block;
+            width: 100%;
+            height: 142px;
+            overflow: hidden;
+            background-color: #f1f2f3;
+            cursor: pointer;
+        }
+        
+        .video-thumbnail img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+        
+        .video-info {
+            min-height: 97px;
+            padding: 8px 14px;
+        }
+        
+        .video-title {
+            height: 40px;
+            margin-bottom: 8px;
+            color: #222;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: color 0.1s linear;
+        }
+        
+        .video-meta {
+            display: grid;
+            grid-template-columns: 90px 90px;
+            color: #99a2aa;
+            font-size: 12px;
+            line-height: 12px;
+        }
+
+        .video-stat {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .video-stat svg {
+            width: 12px;
+            height: 12px;
+            flex: 0 0 auto;
+            fill: currentColor;
+        }
+
+        .video-stat span {
+            cursor: text;
+            user-select: text;
+        }
+        
+        .video-owner {
+            display: block;
+            margin-top: 5px;
+            color: #99a2aa;
+            font-size: 12px;
+            line-height: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.2s ease;
+        }
+        
+        .video-owner:hover {
+            color: #00a1d6;
+        }
+        
+        .online-count {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            height: 30px;
+            background-color: #e5e9ef;
             color: #333;
+            cursor: default;
+            font-size: 12px;
+            line-height: 30px;
+            user-select: none;
+        }
+
+        .online-count strong {
+            color: #111;
+            cursor: text;
+            font-size: 14px;
+            font-weight: 700;
+            transition: color 0.1s linear;
+            user-select: text;
         }
         
         .loading {
@@ -212,19 +515,6 @@
             color: #666;
         }
         
-        .bvid-link {
-            color: #fb7299;
-            text-decoration: none;
-            font-size: 12px;
-            margin-top: 5px;
-            display: block;
-            transition: color 0.3s;
-        }
-        
-        .bvid-link:hover {
-            color: rgb(0, 174, 236);
-        }
-        
         .update-time {
             text-align: center;
             margin-top: 20px;
@@ -232,60 +522,227 @@
             font-size: 14px;
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 1400px) {
+            .container,
+            .channel-nav {
+                width: 980px;
+            }
+
+            .top-nav-optional {
+                display: none;
+            }
+
+            .channel-nav {
+                gap: 20px;
+            }
+
+            .round-nav {
+                gap: 12px;
+            }
+
+            .category-grid {
+                gap: 12px 10px;
+            }
+
+            .special-grid {
+                flex-basis: 210px;
+                padding-left: 16px;
+                gap: 12px 9px;
+            }
+
             .video-grid {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                grid-template-columns: repeat(4, 210px);
+                column-gap: 44px;
+                max-width: 980px;
             }
-            
-            .controls {
-                flex-direction: column;
-                align-items: flex-start;
+        }
+
+        @media (max-width: 1000px) {
+            body {
+                min-width: 0;
             }
-            
-            .search-box {
+
+            .container,
+            .channel-nav {
+                width: auto;
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+
+            .legacy-topbar {
+                padding: 0 16px;
+            }
+
+            .top-nav-left .top-nav-link:not(:first-child),
+            .top-nav-right .top-nav-link,
+            .special-grid {
+                display: none;
+            }
+
+            .header-search {
+                width: min(420px, 52vw);
+            }
+
+            .channel-shell {
+                height: 92px;
+            }
+
+            .channel-nav {
+                gap: 18px;
+                overflow: hidden;
+            }
+
+            .category-grid {
+                min-width: 630px;
+            }
+
+            .video-grid {
+                grid-template-columns: repeat(auto-fit, 210px);
+                gap: 15px 25px;
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .site-header {
+                padding-top: 56px;
+            }
+
+            .legacy-topbar {
+                height: 56px;
+            }
+
+            .video-grid {
+                gap: 16px;
+            }
+
+            .banner-stage {
+                height: 145px;
+            }
+
+            .top-nav-left {
+                display: none;
+            }
+
+            .header-search {
                 width: 100%;
             }
-        }
-        
-        .github-link {
-            margin-top: 10px;
-        }
-        
-        .github-link a {
-            color: white;
-            text-decoration: none;
-            opacity: 0.8;
-        }
-        
-        .github-link a:hover {
-            opacity: 1;
+
+            .submit-link {
+                display: none;
+            }
+
+            .channel-shell {
+                display: none;
+            }
+
+            .list-heading p {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>B站视频实时在线人数排行榜</h1>
-            <p class="subtitle">实时统计B站热门视频的在线观看人数</p>
-            <p class="github-link">
-                <a href="https://github.com/nbt0/bilibili-online-ranking" target="_blank">
-                    <svg height="24" width="24" viewBox="0 0 16 16" style="vertical-align: middle;">
-                        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+    <header class="site-header">
+        <nav class="legacy-topbar" aria-label="B站主导航">
+            <div class="top-nav-left">
+                <a class="mini-header-brand" href="https://github.com/nbt0/bilibili-online-ranking" target="_blank" aria-label="前往GitHub项目仓库">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.63 5.47 7.7.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.95-.09-.23-.48-.95-.82-1.15-.28-.15-.68-.52-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.9-3.64-4 0-.88.31-1.61.82-2.18-.08-.2-.36-1.03.08-2.15 0 0 .67-.22 2.2.83A7.4 7.4 0 0 1 8 3.54c.68 0 1.36.09 2 .27 1.53-1.05 2.2-.83 2.2-.83.44 1.12.16 1.95.08 2.15.51.57.82 1.29.82 2.18 0 3.11-1.87 3.8-3.65 4 .29.25.54.74.54 1.5 0 1.09-.01 1.96-.01 2.23 0 .21.15.46.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z"/>
                     </svg>
-                    GitHub Project
+                    <span>GitHub</span>
                 </a>
-            </p>
-        </header>
-        
-        <div class="controls">
-            <div class="sort-options">
-                <button class="sort-btn active" data-sort="count">按在线人数</button>
-                <button class="sort-btn" data-sort="title">按标题</button>
-                <button class="sort-btn" data-sort="owner">按UP主</button>
+                <a class="top-nav-link" href="https://www.bilibili.com/anime/" target="_blank">番剧</a>
+                <a class="top-nav-link" href="https://live.bilibili.com/" target="_blank">直播</a>
+                <a class="top-nav-link" href="https://game.bilibili.com/" target="_blank">游戏中心</a>
+                <a class="top-nav-link" href="https://www.bilibili.com/cheese/" target="_blank">会员购</a>
+                <a class="top-nav-link top-nav-optional" href="https://manga.bilibili.com/" target="_blank">漫画</a>
+                <a class="top-nav-link top-nav-optional" href="https://www.bilibili.com/v/game/match/" target="_blank">赛事</a>
+                <a class="top-nav-link top-nav-optional" href="https://app.bilibili.com/" target="_blank">下载客户端</a>
             </div>
-            <input type="text" class="search-box" placeholder="搜索视频标题或UP主...">
+
+            <div class="header-search" role="search">
+                <input type="text" class="search-box" aria-label="搜索视频标题或UP主" placeholder="搜索视频标题或UP主...">
+                <button id="search-focus" type="button" aria-label="搜索">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m20.7 19.3-4.16-4.16a7.5 7.5 0 1 0-1.4 1.4l4.16 4.16a1 1 0 0 0 1.4-1.4ZM5 10.5a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0Z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="top-nav-right">
+                <a class="project-link" href="https://github.com/nbt0/bilibili-online-ranking" target="_blank">项目</a>
+                <a class="top-nav-link top-nav-optional" href="https://message.bilibili.com/" target="_blank">消息</a>
+                <a class="top-nav-link" href="https://space.bilibili.com/" target="_blank">动态</a>
+                <a class="top-nav-link" href="https://space.bilibili.com/" target="_blank">收藏</a>
+                <a class="top-nav-link top-nav-optional" href="https://www.bilibili.com/account/history" target="_blank">历史记录</a>
+                <a class="submit-link" href="https://member.bilibili.com/platform/upload/video/frame" target="_blank">投稿</a>
+            </div>
+        </nav>
+
+        <div id="banner-stage" class="banner-stage">
+            <div id="banner-layers" class="banner-layers" aria-hidden="true"></div>
         </div>
-        
+
+        <nav class="channel-shell" aria-label="B站分区导航">
+            <div class="channel-nav">
+                <div class="round-nav">
+                    <a class="round-nav-item" href="https://www.bilibili.com/" target="_blank">
+                        <span class="round-nav-icon round-home">⌂</span><span>首页</span>
+                    </a>
+                    <a class="round-nav-item" href="https://t.bilibili.com/" target="_blank">
+                        <span class="round-nav-icon round-dynamic">✣</span><span>动态</span>
+                    </a>
+                    <a class="round-nav-item" href="https://www.bilibili.com/v/popular/all/" target="_blank">
+                        <span class="round-nav-icon round-popular">♨</span><span>热门</span>
+                    </a>
+                    <a class="round-nav-item" href="https://www.bilibili.com/v/channel/" target="_blank">
+                        <span class="round-nav-icon round-channel">◉</span><span>频道</span>
+                    </a>
+                </div>
+
+                <div class="category-grid">
+                    <a class="category-link" href="https://www.bilibili.com/v/douga/" target="_blank">动画<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/anime/" target="_blank">番剧<span class="category-badge">178</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/music/" target="_blank">音乐<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/guochuang/" target="_blank">国创<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/dance/" target="_blank">舞蹈<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/game/" target="_blank">游戏<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/knowledge/" target="_blank">知识<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/tech/" target="_blank">科技<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/life/" target="_blank">生活<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/kichiku/" target="_blank">鬼畜<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/fashion/" target="_blank">时尚<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/information/" target="_blank">资讯<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/ent/" target="_blank">娱乐<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/cinephile/" target="_blank">影视<span class="category-badge">999+</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/movie/" target="_blank">放映厅<span class="category-badge">217</span></a>
+                    <a class="category-link" href="https://www.bilibili.com/v/channel/" target="_blank">更多⌄</a>
+                </div>
+
+                <div class="special-grid">
+                    <a class="special-link" href="https://www.bilibili.com/read/home" target="_blank"><span class="special-icon">▤</span>专栏</a>
+                    <a class="special-link" href="https://live.bilibili.com/" target="_blank"><span class="special-icon">●</span>直播</a>
+                    <a class="special-link" href="https://www.bilibili.com/blackboard/activity-list.html" target="_blank"><span class="special-icon">⚑</span>活动</a>
+                    <a class="special-link" href="https://www.bilibili.com/cheese/" target="_blank"><span class="special-icon">▦</span>课堂</a>
+                    <a class="special-link" href="https://www.bilibili.com/v/topic/detail/" target="_blank"><span class="special-icon">▰</span>社区中心</a>
+                    <a class="special-link" href="https://music.bilibili.com/" target="_blank"><span class="special-icon">♫</span>新歌热榜</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="list-heading">
+            <span class="list-heading-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M6 5h3v3H6V5Zm5 0h7v3h-7V5ZM6 10.5h3v3H6v-3Zm5 0h7v3h-7v-3ZM6 16h3v3H6v-3Zm5 0h7v3h-7v-3Z"/>
+                </svg>
+            </span>
+            <h1>观看列表</h1>
+            <p>根据稿件网页端的观看情况，定时更新</p>
+        </div>
+
         <div id="video-container" class="video-grid">
             <!-- 视频卡片将通过JavaScript动态生成 -->
         </div>
@@ -293,9 +750,120 @@
         <div class="update-time">
             最后更新时间: <span id="update-time">加载中...</span>
         </div>
-    </div>
+    </main>
     
     <script>
+        localStorage.removeItem('bilibili-account-cache-v1');
+
+        const bannerStage = document.getElementById('banner-stage');
+        const bannerLayersElement = document.getElementById('banner-layers');
+        const bannerLayerState = [];
+        let bannerOriginX = 0;
+        let bannerOffsetX = 0;
+        let bannerFrame = 0;
+        let bannerResizeTimer = 0;
+
+        function getBannerScale() {
+            return Math.max(1, window.innerWidth / 1650);
+        }
+
+        function createBannerLayers(data) {
+            const scale = getBannerScale();
+            bannerLayersElement.innerHTML = '';
+            bannerLayerState.length = 0;
+
+            data.forEach((item) => {
+                const layer = document.createElement('div');
+                const media = document.createElement(item.tagName === 'video' ? 'video' : 'img');
+                const matrix = Array.isArray(item.transform) ? [...item.transform] : [1, 0, 0, 1, 0, 0];
+
+                matrix[4] *= scale;
+                matrix[5] *= scale;
+                layer.className = 'banner-layer';
+                layer.style.opacity = Array.isArray(item.opacity) ? item.opacity[0] : 1;
+
+                media.src = item.src;
+                media.style.width = `${item.width * scale}px`;
+                media.style.height = `${item.height * scale}px`;
+                media.draggable = false;
+
+                if (media.tagName === 'VIDEO') {
+                    media.autoplay = true;
+                    media.loop = true;
+                    media.muted = true;
+                    media.playsInline = true;
+                }
+
+                layer.appendChild(media);
+                bannerLayersElement.appendChild(layer);
+                bannerLayerState.push({
+                    element: layer,
+                    matrix,
+                    depth: Number(item.a) || 0
+                });
+            });
+
+            updateBannerLayers();
+        }
+
+        function updateBannerLayers() {
+            bannerFrame = 0;
+            bannerLayerState.forEach(({ element, matrix, depth }) => {
+                const nextMatrix = [...matrix];
+                nextMatrix[4] += bannerOffsetX * depth;
+                element.style.transform = `matrix(${nextMatrix.join(',')})`;
+            });
+        }
+
+        function requestBannerUpdate() {
+            if (!bannerFrame) {
+                bannerFrame = requestAnimationFrame(updateBannerLayers);
+            }
+        }
+
+        async function initializeBanner() {
+            try {
+                const response = await fetch('assets/2026-04-27/data.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                createBannerLayers(await response.json());
+            } catch (error) {
+                console.warn('本地横幅素材加载失败，已使用渐变背景：', error.message);
+            }
+        }
+
+        bannerStage.addEventListener('mouseenter', (event) => {
+            bannerOriginX = event.clientX;
+        });
+
+        bannerStage.addEventListener('mousemove', (event) => {
+            bannerOffsetX = event.clientX - bannerOriginX;
+            requestBannerUpdate();
+        });
+
+        bannerStage.addEventListener('mouseleave', () => {
+            bannerOffsetX = 0;
+            bannerLayerState.forEach(({ element }) => {
+                element.style.transition = 'transform 300ms ease-out';
+            });
+            requestBannerUpdate();
+            setTimeout(() => {
+                bannerLayerState.forEach(({ element }) => {
+                    element.style.transition = '';
+                });
+            }, 320);
+        });
+
+        window.addEventListener('resize', () => {
+            clearTimeout(bannerResizeTimer);
+            bannerResizeTimer = setTimeout(initializeBanner, 160);
+        });
+
+        document.getElementById('search-focus').addEventListener('click', () => {
+            document.querySelector('.search-box').focus();
+        });
+
         // 获取DOM元素
         const videoContainer = document.getElementById('video-container');
         const sortButtons = document.querySelectorAll('.sort-btn');
@@ -393,6 +961,35 @@
                 video.owner.toLowerCase().includes(term)
             );
         }
+
+        // 将播放量、弹幕量转换为参考页面使用的紧凑格式
+        function formatStatCount(value) {
+            const count = Number(value);
+
+            if (!Number.isFinite(count) || count < 0) {
+                return '0';
+            }
+
+            if (count >= 100000000) {
+                return `${(count / 100000000).toFixed(1).replace(/\.0$/, '')}亿`;
+            }
+
+            if (count >= 10000) {
+                return `${(count / 10000).toFixed(1).replace(/\.0$/, '')}万`;
+            }
+
+            return Math.floor(count).toString();
+        }
+
+        const defaultCoverUrl =
+            'https://i0.hdslb.com/bfs/archive/67db4a6eae398c309244e74f6e85ae8d813bd7c9.jpg';
+
+        function getLowResolutionCoverUrl(value) {
+            const source = typeof value === 'string' && value ? value : defaultCoverUrl;
+            const secureSource = source.replace(/^http:\/\//, 'https://');
+            const baseUrl = secureSource.split('?')[0].split('@')[0];
+            return `${baseUrl}@208w.webp`;
+        }
         
         // 渲染视频列表
         function renderVideos() {
@@ -405,34 +1002,53 @@
             
             let html = '';
             
-            filteredVideos.forEach((video, index) => {
-                const rankClass = index < 3 ? `rank-${index + 1}` : '';
-                const coverUrl = video.pic || 'https://i0.hdslb.com/bfs/archive/67db4a6eae398c309244e74f6e85ae8d813bd7c9.jpg';
+            filteredVideos.forEach(video => {
+                const coverUrl = getLowResolutionCoverUrl(video.pic);
+                const fallbackCoverUrl = getLowResolutionCoverUrl(defaultCoverUrl);
                 
                 html += `
-                    <div class="video-card" onclick="window.open('https://www.bilibili.com/video/${video.bvid}', '_blank')">
-                        <div class="video-thumbnail">
-                            <div class="rank-badge ${rankClass}">${index + 1}</div>
+                    <div class="video-card">
+                        <a class="video-thumbnail"
+                           href="https://www.bilibili.com/video/${video.bvid}"
+                           target="_blank"
+                           rel="noopener noreferrer">
                             <img src="${coverUrl}" 
                                  alt="${video.title}" 
                                  referrerpolicy="no-referrer"
-                                 onerror="this.src='https://i0.hdslb.com/bfs/archive/67db4a6eae398c309244e74f6e85ae8d813bd7c9.jpg'">
-                        </div>
+                                 onerror="this.onerror=null; this.src='${fallbackCoverUrl}'">
+                        </a>
                         <div class="video-info">
-                            <div class="video-title">${video.title}</div>
+                            <a class="video-title"
+                               href="https://www.bilibili.com/video/${video.bvid}"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                ${video.title}
+                            </a>
                             <div class="video-meta">
-                                <div class="video-owner" 
-                                     onclick="event.stopPropagation(); window.open('https://space.bilibili.com/${video.mid}', '_blank')" 
-                                     style="cursor: pointer;">
-                                    ${video.owner}
-                                </div>
-                                <div class="online-count">${video.online_count}</div>
+                                <span class="video-stat" title="播放量 ${formatStatCount(video.view)}">
+                                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                                        <path d="M2.25 2.5h11.5A1.75 1.75 0 0 1 15.5 4.25v7.5a1.75 1.75 0 0 1-1.75 1.75H2.25A1.75 1.75 0 0 1 .5 11.75v-7.5A1.75 1.75 0 0 1 2.25 2.5Zm4 3.05v4.9L10.5 8 6.25 5.55Z"/>
+                                    </svg>
+                                    <span>${formatStatCount(video.view)}</span>
+                                </span>
+                                <span class="video-stat" title="弹幕量 ${formatStatCount(video.danmaku)}">
+                                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                                        <path d="M2.25 2.5h11.5A1.75 1.75 0 0 1 15.5 4.25v7.5a1.75 1.75 0 0 1-1.75 1.75H2.25A1.75 1.75 0 0 1 .5 11.75v-7.5A1.75 1.75 0 0 1 2.25 2.5ZM3.5 5.25v1.2h9v-1.2h-9Zm0 2.15v1.2h5.75V7.4H3.5Zm0 2.15v1.2h7.25v-1.2H3.5Z"/>
+                                    </svg>
+                                    <span>${formatStatCount(video.danmaku)}</span>
+                                </span>
                             </div>
-                            <span class="bvid-link" 
-                                  onclick="event.stopPropagation(); window.open('https://www.bilibili.com/video/${video.bvid}', '_blank')" 
-                                  style="cursor: pointer;">
-                                ${video.bvid}
-                            </span>
+                            <a class="video-owner"
+                               href="https://space.bilibili.com/${video.mid}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               title="${video.owner}">
+                                ${video.owner}
+                            </a>
+                        </div>
+                        <div class="online-count">
+                            <strong>${video.online_count}</strong>
+                            <span>人在看</span>
                         </div>
                     </div>
                 `;
@@ -458,6 +1074,7 @@
         setInterval(loadData, 300000);
         
         // 初始加载数据
+        initializeBanner();
         loadData();
     </script>
 </body>

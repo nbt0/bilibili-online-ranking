@@ -1,40 +1,94 @@
 ﻿name: Update Data
 
 on:
+  push:
+    branches:
+      - main
   schedule:
-    - cron: '*/5 * * * *'  # 每5分钟运行一次
-  workflow_dispatch:  # 允许手动触发
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
-permissions:
-  contents: write
+concurrency:
+  group: ranking-update
+  cancel-in-progress: false
 
 jobs:
-  update-data:
+  build:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-    
+      uses: actions/checkout@v6
+
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.x'
-    
+        python-version: '3.12'
+
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests
-    
+      run: python -m pip install requests
+
+    - name: Run tests
+      run: python -m unittest -v
+
     - name: Run data collection
       run: python video_ranking.py
-    
-    - name: Deploy to gh-pages
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Validate public data
+      shell: python
       run: |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        git add data.json index.html
-        git commit -m "更新数据和网页"
-        git push origin HEAD:gh-pages -f
+        import json
+        from pathlib import Path
+        from video_ranking import PUBLIC_VIDEO_FIELDS
+
+        data = json.loads(Path("data.json").read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or not 1 <= len(data) <= 100:
+            raise SystemExit("data.json must contain 1 to 100 videos")
+
+        allowed = set(PUBLIC_VIDEO_FIELDS)
+        online_values = []
+        for bvid, record in data.items():
+            if not isinstance(record, dict) or set(record) != allowed:
+                raise SystemExit(f"unexpected public fields for {bvid}")
+            if not str(record["online_count"]).isdigit():
+                raise SystemExit(f"invalid online_count for {bvid}")
+            if int(record["online_count"]) != record["count_num"]:
+                raise SystemExit(f"online count mismatch for {bvid}")
+            online_values.append(record["count_num"])
+
+        if online_values != sorted(online_values, reverse=True):
+            raise SystemExit("data.json is not sorted by online count")
+
+        print(f"Validated {len(data)} public videos")
+
+    - name: Build public site
+      run: |
+        mkdir -p dist
+        cp index.html data.json dist/
+        cp -R assets dist/assets
+
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
+
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v4
+      with:
+        path: dist
+        retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

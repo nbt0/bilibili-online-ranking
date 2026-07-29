@@ -1,3 +1,4 @@
+import argparse
 import json
 import math
 import re
@@ -84,6 +85,25 @@ PUBLIC_RANKING_SOURCES = (
 PGC_RECENT_EPISODE_SOURCES = frozenset({'anime', 'guochuang', 'tv'})
 PGC_TRAILER_SOURCES = frozenset({'anime', 'guochuang'})
 PGC_TRAILER_KEYWORDS = ('预告', 'pv', '宣传片', '先导', 'trailer')
+DEFAULT_USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+    'AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/150.0.0.0 Safari/537.36'
+)
+
+
+class PublicSourceUnavailableError(RuntimeError):
+    """关键公开候选来源连续失败或返回不完整数据。"""
+
+
+class BilibiliBusinessError(ValueError):
+    """HTTP 成功但 B 站 JSON 返回非零业务码。"""
+
+    def __init__(self, code, message, has_voucher=False):
+        self.code = code
+        self.message = str(message or '')
+        self.has_voucher = bool(has_voucher)
+        super().__init__(f'code={code}, message={self.message}')
 
 
 class BilibiliCrawler:
@@ -94,15 +114,18 @@ class BilibiliCrawler:
         anomaly_extra_samples=2,
         request_interval=0.0,
         output_path='data.json',
+        previous_data_path='data.json',
+        user_agent=DEFAULT_USER_AGENT,
+        request_attempts=3,
+        risk_control_backoff=(2.0, 5.0),
     ):
-        # 设置请求头，模拟浏览器访问
+        # 使用不携带固定设备 Cookie 的匿名会话，避免长期身份错配。
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': user_agent,
             'Referer': 'https://www.bilibili.com/v/popular/rank/all',
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9',
             'Origin': 'https://www.bilibili.com',
-            'Cookie': 'buvid3=2D4B09A5-0E5F-4537-9F7C-E293CE7324F7167646infoc'
         }
         # API接口地址
         self.api_root = 'https://api.bilibili.com'
@@ -117,7 +140,13 @@ class BilibiliCrawler:
         self.anomaly_extra_samples = max(0, anomaly_extra_samples)
         self.request_interval = max(0.0, request_interval)
         self.request_timeout = (5, 10)
+        self.request_attempts = max(1, int(request_attempts))
+        self.risk_control_backoff = tuple(
+            max(0.0, float(delay))
+            for delay in risk_control_backoff
+        ) or (2.0,)
         self.output_path = Path(output_path)
+        self.previous_data_path = Path(previous_data_path)
         self.thread_local = threading.local()
         self.request_lock = threading.Lock()
         self.next_request_at = 0.0
@@ -146,11 +175,29 @@ class BilibiliCrawler:
         if delay:
             time.sleep(delay)
 
-    def request_json(self, url, *, params=None, referer=None):
-        """请求公开 JSON API；失败两次后返回 None"""
+    def retry_delay(self, error, attempt):
+        """按错误类型返回下一次重试前的等待秒数。"""
+        if (
+            isinstance(error, BilibiliBusinessError)
+            and error.code == -352
+        ):
+            return self.risk_control_backoff[
+                min(attempt, len(self.risk_control_backoff) - 1)
+            ]
+        return 0.3 * (attempt + 1)
+
+    def request_json(
+        self,
+        url,
+        *,
+        params=None,
+        referer=None,
+        required_source=None,
+    ):
+        """请求公开 JSON API；关键来源连续失败时抛出异常。"""
         headers = {'Referer': referer} if referer else None
         last_error = None
-        for attempt in range(2):
+        for attempt in range(self.request_attempts):
             self.wait_for_request_slot()
             try:
                 response = self.get_session().get(
@@ -161,18 +208,50 @@ class BilibiliCrawler:
                 )
                 response.raise_for_status()
                 data = response.json()
-                if data.get('code') != 0:
-                    raise ValueError(
-                        f"code={data.get('code')}, "
-                        f"message={data.get('message')}"
+                if not isinstance(data, dict):
+                    raise ValueError('接口未返回 JSON 对象')
+
+                code = data.get('code')
+                if code != 0:
+                    payload = data.get('data')
+                    voucher_in_body = (
+                        isinstance(payload, dict)
+                        and bool(payload.get('v_voucher'))
+                    )
+                    voucher_in_header = bool(
+                        response.headers.get('x-bili-gaia-vvoucher')
+                    )
+                    raise BilibiliBusinessError(
+                        code,
+                        data.get('message'),
+                        voucher_in_body or voucher_in_header,
                     )
                 return data
             except (requests.RequestException, ValueError) as error:
                 last_error = error
-                if attempt == 0:
-                    time.sleep(0.3)
+                if attempt + 1 < self.request_attempts:
+                    delay = self.retry_delay(error, attempt)
+                    if (
+                        isinstance(error, BilibiliBusinessError)
+                        and error.code == -352
+                    ):
+                        voucher_status = (
+                            '有' if error.has_voucher else '无'
+                        )
+                        print(
+                            f"请求触发 B 站风控 code=-352，"
+                            f"voucher={voucher_status}，"
+                            f"{delay:g} 秒后重试 "
+                            f"({attempt + 2}/{self.request_attempts}): {url}"
+                        )
+                    time.sleep(delay)
 
         print(f"请求失败: {url}: {last_error}")
+        if required_source:
+            raise PublicSourceUnavailableError(
+                f"关键公开来源 {required_source} 连续请求失败: "
+                f"{last_error}"
+            ) from last_error
         return None
 
     def get_ranking_videos(self):
@@ -181,6 +260,7 @@ class BilibiliCrawler:
             self.ranking_api,
             params={'rid': 0, 'type': 'all'},
             referer='https://www.bilibili.com/v/popular/rank/all',
+            required_source='rank_all',
         )
         return ((data or {}).get('data') or {}).get('list', [])
 
@@ -266,6 +346,7 @@ class BilibiliCrawler:
                 self.popular_api,
                 params={'pn': page_number, 'ps': page_size},
                 referer='https://www.bilibili.com/v/popular/all',
+                required_source='popular_all',
             )
             payload = (data or {}).get('data') or {}
             page = payload.get('list') or []
@@ -275,7 +356,13 @@ class BilibiliCrawler:
             if payload.get('no_more') or len(page) < page_size:
                 break
             page_number += 1
-        return videos[:limit]
+        videos = videos[:limit]
+        if len(videos) < limit:
+            raise PublicSourceUnavailableError(
+                f"关键公开来源 popular_all 数据不完整: "
+                f"期望 {limit} 条，实际 {len(videos)} 条"
+            )
+        return videos
 
     def fetch_pgc_rank_items(self, source):
         """获取番剧、国创、电影或综艺的 season 排行"""
@@ -466,6 +553,11 @@ class BilibiliCrawler:
         for source in PUBLIC_RANKING_SOURCES:
             if source['kind'] == 'ugc_rank':
                 items = self.get_ranking_videos()[:source['limit']]
+                if len(items) < source['limit']:
+                    raise PublicSourceUnavailableError(
+                        f"关键公开来源 {source['key']} 数据不完整: "
+                        f"期望 {source['limit']} 条，实际 {len(items)} 条"
+                    )
                 candidates.extend(
                     self.normalize_ugc_candidate(item, source['key'])
                     for item in items
@@ -501,14 +593,17 @@ class BilibiliCrawler:
     def load_previous_results(self):
         """读取上一轮结果，用于在接口异常时保留可靠值"""
         try:
-            with self.output_path.open('r', encoding='utf-8') as file:
+            with self.previous_data_path.open('r', encoding='utf-8') as file:
                 data = json.load(file)
             if isinstance(data, dict):
                 self.previous_results = data
-                print(f"读取到上一轮 {len(data)} 条数据")
+                print(
+                    f"从 {self.previous_data_path} "
+                    f"读取到上一轮 {len(data)} 条数据"
+                )
                 return
         except (OSError, ValueError) as error:
-            print(f"读取上一轮数据失败: {error}")
+            print(f"读取上一轮数据失败 ({self.previous_data_path}): {error}")
 
         self.previous_results = {}
 
@@ -1041,6 +1136,39 @@ class BilibiliCrawler:
         self.display_ranking()
         return True
 
+def parse_arguments(argv=None):
+    """解析公开爬虫命令行参数。"""
+    parser = argparse.ArgumentParser(
+        description='生成 B 站视频实时在线人数公开排行榜数据。',
+    )
+    parser.add_argument(
+        '--output',
+        default='data.json',
+        help='本轮公开排行榜输出路径（默认：data.json）',
+    )
+    parser.add_argument(
+        '--previous-data',
+        default='data.json',
+        help='上一轮可靠公开数据路径（默认：data.json）',
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    """运行命令行入口。"""
+    arguments = parse_arguments(argv)
+    crawler = BilibiliCrawler(
+        request_interval=0.08,
+        output_path=arguments.output,
+        previous_data_path=arguments.previous_data,
+    )
+    try:
+        success = crawler.run()
+    except PublicSourceUnavailableError as error:
+        print(f"数据采集已停止，未写入本轮结果: {error}")
+        return 1
+    return 0 if success else 1
+
+
 if __name__ == '__main__':
-    crawler = BilibiliCrawler(request_interval=0.08)
-    crawler.run()
+    raise SystemExit(main())

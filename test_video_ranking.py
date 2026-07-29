@@ -1,10 +1,24 @@
+import json
+import tempfile
 import unittest
 import time
+from contextlib import redirect_stdout
+from io import StringIO
+from pathlib import Path
+from unittest.mock import call, patch
 
 from video_ranking import (
     BilibiliCrawler,
+    DEFAULT_USER_AGENT,
     PUBLIC_RANKING_SOURCES,
     PUBLIC_VIDEO_FIELDS,
+    PublicSourceUnavailableError,
+    main,
+    parse_arguments,
+)
+from validate_public_data import (
+    PublicDataValidationError,
+    validate_public_data,
 )
 
 
@@ -64,7 +78,188 @@ class SumCrawler(PageCrawler):
         }
 
 
+class FakeResponse:
+    def __init__(self, payload, headers=None):
+        self.payload = payload
+        self.headers = headers or {}
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self.payload
+
+
+class SequenceSession:
+    def __init__(self, responses):
+        self.responses = iter(responses)
+        self.calls = []
+
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return next(self.responses)
+
+
 class BilibiliCrawlerTests(unittest.TestCase):
+    @staticmethod
+    def make_public_record():
+        return {
+            'cid': 123,
+            'title': '标题',
+            'pic': 'https://example.test/cover.jpg',
+            'owner': 'UP',
+            'mid': '456',
+            'view': 100,
+            'danmaku': 10,
+            'online_count': '3000',
+            'count_num': 3000,
+            'url': 'https://www.bilibili.com/video/BV1test',
+            'updated_at': '2026-07-28T12:00:00+08:00',
+        }
+
+    def test_cli_separates_output_and_previous_data_paths(self):
+        arguments = parse_arguments(
+            [
+                '--output',
+                '_work/public-ranking.json',
+                '--previous-data',
+                'data.json',
+            ]
+        )
+        crawler = BilibiliCrawler(
+            output_path=arguments.output,
+            previous_data_path=arguments.previous_data,
+        )
+        self.assertEqual(
+            crawler.output_path,
+            Path('_work/public-ranking.json'),
+        )
+        self.assertEqual(crawler.previous_data_path, Path('data.json'))
+
+    def test_loads_previous_data_from_path_separate_from_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            previous_path = root / 'previous.json'
+            output_path = root / '_work' / 'public-ranking.json'
+            previous_data = {'BV1test': self.make_public_record()}
+            previous_path.write_text(
+                json.dumps(previous_data, ensure_ascii=False),
+                encoding='utf-8',
+            )
+
+            crawler = BilibiliCrawler(
+                output_path=output_path,
+                previous_data_path=previous_path,
+            )
+            crawler.load_previous_results()
+
+            self.assertEqual(crawler.previous_results, previous_data)
+            self.assertFalse(output_path.exists())
+
+    def test_writes_public_ranking_to_work_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = (
+                Path(directory) / '_work' / 'public-ranking.json'
+            )
+            data = {'BV1test': self.make_public_record()}
+            crawler = BilibiliCrawler(output_path=output_path)
+
+            crawler.write_public_data(data)
+
+            self.assertTrue(output_path.is_file())
+            self.assertEqual(
+                json.loads(output_path.read_text(encoding='utf-8')),
+                data,
+            )
+
+    def test_public_validator_rejects_internal_fields(self):
+        for field in ('source', 'samples', 'online_total'):
+            with self.subTest(field=field):
+                record = self.make_public_record()
+                record[field] = 'internal'
+                with self.assertRaisesRegex(
+                    PublicDataValidationError,
+                    field,
+                ):
+                    validate_public_data({'BV1test': record})
+
+    def test_anonymous_session_headers_do_not_inject_fixed_cookie(self):
+        crawler = BilibiliCrawler()
+        self.assertNotIn('Cookie', crawler.headers)
+        self.assertEqual(crawler.headers['User-Agent'], DEFAULT_USER_AGENT)
+        self.assertIn('Chrome/150.0.0.0', DEFAULT_USER_AGENT)
+
+    def test_risk_control_uses_longer_backoff_then_recovers(self):
+        crawler = BilibiliCrawler()
+        crawler.thread_local.session = SequenceSession(
+            [
+                FakeResponse(
+                    {
+                        'code': -352,
+                        'message': '风控校验失败',
+                        'data': {'v_voucher': 'not-logged'},
+                    }
+                ),
+                FakeResponse(
+                    {
+                        'code': -352,
+                        'message': '风控校验失败',
+                        'data': {},
+                    }
+                ),
+                FakeResponse({'code': 0, 'data': {'list': []}}),
+            ]
+        )
+
+        with patch('video_ranking.time.sleep') as sleep:
+            with redirect_stdout(StringIO()) as output:
+                data = crawler.request_json(
+                    crawler.popular_api,
+                    required_source='popular_all',
+                )
+
+        self.assertEqual(data['code'], 0)
+        self.assertEqual(
+            sleep.call_args_list,
+            [call(2.0), call(5.0)],
+        )
+        self.assertIn('voucher=有', output.getvalue())
+        self.assertNotIn('not-logged', output.getvalue())
+
+    def test_required_source_failure_is_not_returned_as_empty_data(self):
+        crawler = BilibiliCrawler()
+        crawler.thread_local.session = SequenceSession(
+            [
+                FakeResponse(
+                    {'code': -352, 'message': '风控校验失败'}
+                )
+                for _ in range(3)
+            ]
+        )
+
+        with patch('video_ranking.time.sleep'):
+            with redirect_stdout(StringIO()):
+                with self.assertRaisesRegex(
+                    PublicSourceUnavailableError,
+                    'popular_all',
+                ):
+                    crawler.request_json(
+                        crawler.popular_api,
+                        required_source='popular_all',
+                    )
+
+    def test_cli_returns_failure_when_required_source_is_unavailable(self):
+        with patch.object(
+            BilibiliCrawler,
+            'run',
+            side_effect=PublicSourceUnavailableError('popular_all unavailable'),
+        ):
+            with redirect_stdout(StringIO()) as output:
+                exit_code = main([])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn('未写入本轮结果', output.getvalue())
+
     def test_public_pgc_source_limits(self):
         limits = {
             source['key']: source['limit']

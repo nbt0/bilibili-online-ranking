@@ -19,8 +19,18 @@ jobs:
       contents: read
 
     steps:
-    - name: Checkout
+    - name: Checkout public source
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Checkout enrichment source
+      uses: actions/checkout@v6
+      with:
+        repository: ${{ secrets.PRIVATE_REPOSITORY }}
+        token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+        path: _private
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -28,56 +38,42 @@ jobs:
         python-version: '3.12'
 
     - name: Install dependencies
-      run: python -m pip install requests
+      run: python -m pip install -r _private/requirements.txt
 
-    - name: Run tests
-      run: python -m unittest -v
+    - name: Run public tests
+      run: python -B -X utf8 -m unittest -v
 
-    - name: Run data collection
-      run: python video_ranking.py
+    - name: Run enrichment tests
+      run: python -B -X utf8 -m unittest discover -s _private/tests -v
 
-    - name: Validate public data
-      shell: python
-      run: |
-        import json
-        from pathlib import Path
+    - name: Build public ranking draft
+      run: >-
+        python -B -X utf8 video_ranking.py
+        --output _work/public-ranking.json
+        --previous-data data.json
 
-        data = json.loads(Path("data.json").read_text(encoding="utf-8"))
-        if not isinstance(data, dict) or not 1 <= len(data) <= 100:
-            raise SystemExit("data.json must contain 1 to 100 videos")
+    - name: Validate public ranking draft
+      run: >-
+        python -B -X utf8 validate_public_data.py
+        _work/public-ranking.json
 
-        allowed = {
-            "cid",
-            "title",
-            "pic",
-            "owner",
-            "mid",
-            "view",
-            "danmaku",
-            "online_count",
-            "count_num",
-            "url",
-            "updated_at",
-        }
-        online_values = []
-        for bvid, record in data.items():
-            if not isinstance(record, dict) or set(record) != allowed:
-                raise SystemExit(f"unexpected public fields for {bvid}")
-            if not str(record["online_count"]).isdigit():
-                raise SystemExit(f"invalid online_count for {bvid}")
-            if int(record["online_count"]) != record["count_num"]:
-                raise SystemExit(f"online count mismatch for {bvid}")
-            online_values.append(record["count_num"])
+    - name: Build enriched ranking
+      run: >-
+        python -B -X utf8 _private/scripts/build_final.py
+        --public-input _work/public-ranking.json
+        --output _work/final-data.json
 
-        if online_values != sorted(online_values, reverse=True):
-            raise SystemExit("data.json is not sorted by online count")
-
-        print(f"Validated {len(data)} public videos")
+    - name: Validate final public data
+      run: >-
+        python -B -X utf8 validate_public_data.py
+        _work/public-ranking.json
+        _work/final-data.json
 
     - name: Build public site
       run: |
         mkdir -p dist
-        cp index.html data.json dist/
+        cp index.html dist/index.html
+        cp _work/final-data.json dist/data.json
         cp -R assets dist/assets
 
     - name: Configure GitHub Pages

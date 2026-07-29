@@ -57,10 +57,16 @@ jobs:
         python -B -X utf8 validate_public_data.py
         _work/public-ranking.json
 
-    - name: Build enriched ranking
+    - name: Export provider data
       run: >-
-        python -B -X utf8 _private/scripts/build_final.py
+        python -B -X utf8 _private/scripts/export_provider_data.py
+        --output _work/private-provider.json
+
+    - name: Merge provider data
+      run: >-
+        python -B -X utf8 merge_provider_data.py
         --public-input _work/public-ranking.json
+        --provider-input _work/private-provider.json
         --output _work/final-data.json
 
     - name: Validate final public data

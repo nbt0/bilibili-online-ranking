@@ -47,10 +47,22 @@ jobs:
       run: python -B -X utf8 -m unittest discover -s _private/tests -v
 
     - name: Build public ranking draft
-      run: >-
-        python -B -X utf8 video_ranking.py
-        --output _work/public-ranking.json
-        --previous-data data.json
+      shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if python -B -X utf8 video_ranking.py \
+            --output _work/public-ranking.json \
+            --previous-data data.json; then
+            exit 0
+          fi
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error::Public ranking failed after 3 attempts"
+            exit 1
+          fi
+          delay=$((attempt * 30))
+          echo "Public ranking attempt $attempt failed; retrying in ${delay}s"
+          sleep "$delay"
+        done
 
     - name: Validate public ranking draft
       run: >-

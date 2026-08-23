@@ -248,6 +248,91 @@ class BilibiliCrawlerTests(unittest.TestCase):
                         required_source='popular_all',
                     )
 
+    def test_popular_pagination_continues_after_short_page(self):
+        crawler = BilibiliCrawler()
+        pages = [
+            {
+                'code': 0,
+                'data': {
+                    'list': [
+                        {'bvid': f'BV{i:03d}'}
+                        for i in range(49)
+                    ],
+                    'no_more': False,
+                },
+            },
+            {
+                'code': 0,
+                'data': {
+                    'list': [
+                        {'bvid': f'BV{i:03d}'}
+                        for i in range(49, 99)
+                    ],
+                    'no_more': False,
+                },
+            },
+            {
+                'code': 0,
+                'data': {
+                    'list': [
+                        {'bvid': f'BV{i:03d}'}
+                        for i in range(99, 149)
+                    ],
+                    'no_more': False,
+                },
+            },
+        ]
+
+        with patch.object(
+            crawler,
+            'request_json',
+            side_effect=pages,
+        ) as request_json:
+            videos = crawler.fetch_popular_videos(limit=100)
+
+        self.assertEqual(len(videos), 100)
+        self.assertEqual(
+            [
+                request.kwargs['params']['pn']
+                for request in request_json.call_args_list
+            ],
+            [1, 2, 3],
+        )
+
+    def test_popular_pagination_requires_unique_videos(self):
+        crawler = BilibiliCrawler()
+        duplicate_page = [
+            {'bvid': f'BV{i:03d}'}
+            for i in range(50)
+        ]
+        pages = [
+            {
+                'code': 0,
+                'data': {
+                    'list': duplicate_page,
+                    'no_more': False,
+                },
+            },
+            {
+                'code': 0,
+                'data': {
+                    'list': duplicate_page,
+                    'no_more': False,
+                },
+            },
+        ]
+
+        with patch.object(
+            crawler,
+            'request_json',
+            side_effect=pages,
+        ):
+            with self.assertRaisesRegex(
+                PublicSourceUnavailableError,
+                '实际 50 条',
+            ):
+                crawler.fetch_popular_videos(limit=100)
+
     def test_cli_returns_failure_when_required_source_is_unavailable(self):
         with patch.object(
             BilibiliCrawler,

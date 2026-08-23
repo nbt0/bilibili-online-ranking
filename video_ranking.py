@@ -339,9 +339,11 @@ class BilibiliCrawler:
     def fetch_popular_videos(self, limit=100):
         """分页获取热门综合视频，当前接口单页最多使用50条"""
         videos = []
-        page_size = min(50, limit)
+        seen_bvids = set()
+        page_size = max(1, min(50, limit))
         page_number = 1
-        while len(videos) < limit:
+        max_pages = max(1, math.ceil(limit / page_size) + 2)
+        while len(videos) < limit and page_number <= max_pages:
             data = self.request_json(
                 self.popular_api,
                 params={'pn': page_number, 'ps': page_size},
@@ -352,8 +354,17 @@ class BilibiliCrawler:
             page = payload.get('list') or []
             if not page:
                 break
-            videos.extend(page)
-            if payload.get('no_more') or len(page) < page_size:
+
+            new_count = 0
+            for video in page:
+                bvid = str(video.get('bvid') or '')
+                if not bvid or bvid in seen_bvids:
+                    continue
+                seen_bvids.add(bvid)
+                videos.append(video)
+                new_count += 1
+
+            if payload.get('no_more') or new_count == 0:
                 break
             page_number += 1
         videos = videos[:limit]
